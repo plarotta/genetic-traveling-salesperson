@@ -1,0 +1,9 @@
+name: tsp-env
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10.0
+  - matplotlib
+  - scipy
+prefix: /Users/plarotta/opt/anaconda3/envs/tsp-env
