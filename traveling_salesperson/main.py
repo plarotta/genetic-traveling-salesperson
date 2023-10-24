@@ -3,7 +3,10 @@ import numpy as np
 import random
 import secrets
 from scipy.special import softmax
+from numba import njit
+# from sklearn.preprocessing import normalize
 
+@njit
 def get_path_length(path: np.array) -> float:
     '''calculates the distance covered by the path.
     
@@ -16,10 +19,11 @@ def get_path_length(path: np.array) -> float:
       float representing euclidian length traveled through
       the path
     '''
-    tot = np.sum([
-      np.linalg.norm(np.array(path[i+1])-np.array(path[i]))
+    tot = np.array([
+      np.linalg.norm(path[i+1]-path[i])
       for i in range(len(path)-1)
       ])
+    tot = np.sum(tot)
     return(np.round(tot,3))
 
 def randomly_find_path(iterations: int, data: np.array) ->list:
@@ -88,7 +92,7 @@ def hillclimber_find_path(max_depth: int, data: np.array) -> float:
       current_path_length = next_path_length
   return(get_path_length(current_path))
 
-
+@njit
 def generate_segment(segment: np.array, reference: np.array) -> np.array:
   '''regenerate segment in the order that it appears in reference
   
@@ -158,9 +162,11 @@ def pick_n_random_individuals(population: np.array, n: int, weights: list) -> li
     n solutions from the population picked using fitness-proportionate selection
   '''
   out_idx = np.random.choice([i for i in range(len(population))], n, replace = False, p = weights)
+  # print(out_idx)
   output_individuals = [population[out_idx[0],], population[out_idx[1],]]
   return(output_individuals)
 
+@njit
 def fitness_sort(population: np.array) -> np.array:
   '''sort population of solutions by fitness.
 
@@ -175,7 +181,10 @@ def fitness_sort(population: np.array) -> np.array:
   fit_vals = np.array([get_path_length(p) for p in population])
   return(population[fit_vals.argsort()[::]], min(fit_vals), np.sort(fit_vals))
 
-def evolutionary_algo(n_generations, data):
+# def roulette_wheel(self, fitnesses: np.array) -> np.array:
+
+
+def evolutionary_algo(n_generations, data, population_size):
   '''evolutionary algo for solving the traveling salesman problem.
   Mutation operator: flip_two_nodes()
   Breeding/crossing operator: cross_parents()
@@ -192,40 +201,68 @@ def evolutionary_algo(n_generations, data):
     fitness sorted population, shortest path length in population,
     and the sorted array of all fitnesses in population
   '''
-  initial_population = np.array([np.random.permutation(data) for _ in range(50)])
+  half_pop = int(population_size/2)
+  initial_population = np.array([np.random.permutation(data) for _ in range(population_size)])
 
   for i in range(n_generations):
-    offspring = np.zeros((26,1000,2))
+    
+    offspring = np.zeros((population_size,1000,2))
     n_offspring = 0
     
     initial_population, current_best, fitnesses = fitness_sort(initial_population)
-    initial_population = initial_population[:25,]
+    initial_population = initial_population[:half_pop]
+    fitnesses = fitnesses[:half_pop]
+    probs = softmax(-fitnesses)#1/fitnesses*1/np.sum(1/fitnesses)
+    # print(probs)
+    # print(list(zip(probs,fitnesses)))
     
-    while n_offspring < 26:
-      parent1, parent2 = pick_n_random_individuals(initial_population,2, weights = softmax([1/w for w in fitnesses[:25]]))
-      n1, n2 = sorted([secrets.randbelow(1000), secrets.randbelow(1000)])
+    while n_offspring < population_size:
+      # print(1/fitnesses*1/np.sum(1/fitnesses))
+      # print(fitnesses)
+      # input()
 
-      kid1, kid2 = cross_parents(parent1, parent2, n1, n2) #TODO
+      
+      parent1, parent2 = pick_n_random_individuals(initial_population,2, weights = probs)
+      if np.random.choice([True,False],p=[0.7,0.3]):
 
-      if np.random.choice([True,False], p = [.9,.1]):
+        n1, n2 = sorted([secrets.randbelow(1000), secrets.randbelow(1000)])
+
+        kid1, kid2 = cross_parents(parent1, parent2, n1, n2) 
+
         mutated_kid1 = flip_two_nodes(kid1)
-        kid1 = mutated_kid1 if get_path_length(mutated_kid1) < get_path_length(kid1) else kid1
-          
-      if np.random.choice([True,False], p = [.9,.1]):
+        kid1 = np.copy(mutated_kid1) if get_path_length(mutated_kid1) < get_path_length(kid1) else kid1
+        
+        # kid1 = kid1 if get_path_length(kid1) < p1_fit else np.copy(parent1)
+            
         mutated_kid2 = flip_two_nodes(kid2)
-        kid2 = mutated_kid2 if get_path_length(mutated_kid2) < get_path_length(kid2) else kid2
-
+        kid2 = np.copy(mutated_kid2) if get_path_length(mutated_kid2) < get_path_length(kid2) else kid2
+        # kid2 = kid2 if get_path_length(kid2) < p2_fit else np.copy(parent2)
+        # offspring[n_offspring,:,:] = kid1
+        # offspring[n_offspring + 1,:,:] = kid2
+        # n_offspring += 2
+      
+      else:
+        kid1 = np.copy(parent1)
+        kid2 = np.copy(parent2)
+      
       offspring[n_offspring,:,:] = kid1
-      offspring[n_offspring + 1,:,:] = kid1
+      offspring[n_offspring + 1,:,:] = kid2
       n_offspring += 2
+
+      # offspring[n_offspring+2,:,:] = parent1
+
+      # offspring[n_offspring+3,:,:] = parent2
+      # n_offspring += 4
+
+
     
-    print(f'generation #: {i}, generation best: {current_best}')
-    initial_population = np.concatenate((initial_population, offspring))
+    print(f'generation #: {i}, generation best: {current_best}, diversity: {np.mean(np.var(initial_population,axis=0))}, most likely: {probs[0]}')
+    initial_population = np.copy(offspring)# np.concatenate((initial_population, offspring)) #np.copy(offspring)#
   return(current_best)
 
 if __name__ == '__main__':
     data = np.loadtxt('data/tsp.txt',delimiter=',')
-    print(evolutionary_algo(2500,data))
+    print(evolutionary_algo(2500,data, 48))
 
 
 
