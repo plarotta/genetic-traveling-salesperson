@@ -5,6 +5,8 @@ import secrets
 from scipy.special import softmax
 from numba import njit
 # from sklearn.preprocessing import normalize
+import wandb
+from tqdm import tqdm
 
 @njit
 def get_path_length(path: np.array) -> float:
@@ -60,7 +62,7 @@ def flip_two_nodes(data: np.array) -> np.array:
     modified version of data where two cities in the path are switched
   '''
   modified_path = np.copy(data)
-  indices = [secrets.randbelow(1000), secrets.randbelow(1000)]
+  indices = [secrets.randbelow(len(data)), secrets.randbelow(len(data))]
   modified_path[indices[0],] = data[indices[1],]
   modified_path[indices[1],] = data[indices[0],]
   return(modified_path)
@@ -119,6 +121,7 @@ def cross_parents(parent1: np.array,
                   crosspoint1: int, 
                   crosspoint2: int
                   ) -> tuple:
+                  
   '''evolutionary operator for crossing individuals in a population of solutions.
   in TSP, individual solutions are paths through the 1000 cities in tsp.txt, and 
   the mechanism of crossing over is a simple 2-point crossover
@@ -179,9 +182,7 @@ def fitness_sort(population: np.array) -> np.array:
     and the sorted array of all fitnesses in population
   '''
   fit_vals = np.array([get_path_length(p) for p in population])
-  return(population[fit_vals.argsort()[::]], min(fit_vals), np.sort(fit_vals))
-
-# def roulette_wheel(self, fitnesses: np.array) -> np.array:
+  return(population[fit_vals.argsort()[::]], np.min(fit_vals), np.sort(fit_vals))
 
 
 def evolutionary_algo(n_generations, data, population_size):
@@ -201,68 +202,93 @@ def evolutionary_algo(n_generations, data, population_size):
     fitness sorted population, shortest path length in population,
     and the sorted array of all fitnesses in population
   '''
-  half_pop = int(population_size/2)
-  initial_population = np.array([np.random.permutation(data) for _ in range(population_size)])
+  run = wandb.init(name='600k steps',)
+  half_pop = int(population_size*.33)
+  initial_population =  np.array([np.random.permutation(data) for _ in range(population_size)])
+  # initial_population = np.concatenate( ( np.array([np.random.permutation(data) for _ in range(population_size-1)]) , np.expand_dims(data,axis=0) ) )
 
-  for i in range(n_generations):
+
+  for i in tqdm(range(n_generations)):
     
-    offspring = np.zeros((population_size,1000,2))
+    offspring = np.zeros((population_size,len(data),2))
     n_offspring = 0
     
     initial_population, current_best, fitnesses = fitness_sort(initial_population)
+    best_indiv = initial_population[0]
+
     initial_population = initial_population[:half_pop]
     fitnesses = fitnesses[:half_pop]
-    probs = softmax(-fitnesses)#1/fitnesses*1/np.sum(1/fitnesses)
-    # print(probs)
-    # print(list(zip(probs,fitnesses)))
-    
+    probs = softmax(-fitnesses)#1/fitnesses*1/np.sum(1/fitnesses) 
+
+    # print(f'generation #: {i}, generation best: {current_best}, diversity: {np.mean(np.var(initial_population,axis=0))}, most likely: {probs[0]}')
+    run.log({'generation #': i, 
+             'generation best': current_best, 
+             'diversity': np.mean(np.var(initial_population,axis=0)),
+             'most likely': probs[0]})
+
+    seen = set([])
     while n_offspring < population_size:
-      # print(1/fitnesses*1/np.sum(1/fitnesses))
-      # print(fitnesses)
-      # input()
 
-      
-      parent1, parent2 = pick_n_random_individuals(initial_population,2, weights = probs)
-      if np.random.choice([True,False],p=[0.7,0.3]):
+      parent1, parent2 = pick_n_random_individuals(initial_population, 2, weights = probs)
 
-        n1, n2 = sorted([secrets.randbelow(1000), secrets.randbelow(1000)])
+      # mating
+      if np.random.choice([True,False],p=[0.8,0.2]):
+        # n1, n2 = sorted([secrets.randbelow(len(data)), secrets.randbelow(len(data))])
+        n1, n2 = sorted([np.random.randint(low=0, high=len(data)), np.random.randint(low=0, high=len(data))])
 
         kid1, kid2 = cross_parents(parent1, parent2, n1, n2) 
 
-        mutated_kid1 = flip_two_nodes(kid1)
-        kid1 = np.copy(mutated_kid1) if get_path_length(mutated_kid1) < get_path_length(kid1) else kid1
-        
-        # kid1 = kid1 if get_path_length(kid1) < p1_fit else np.copy(parent1)
-            
-        mutated_kid2 = flip_two_nodes(kid2)
-        kid2 = np.copy(mutated_kid2) if get_path_length(mutated_kid2) < get_path_length(kid2) else kid2
-        # kid2 = kid2 if get_path_length(kid2) < p2_fit else np.copy(parent2)
-        # offspring[n_offspring,:,:] = kid1
-        # offspring[n_offspring + 1,:,:] = kid2
-        # n_offspring += 2
-      
       else:
         kid1 = np.copy(parent1)
         kid2 = np.copy(parent2)
-      
-      offspring[n_offspring,:,:] = kid1
-      offspring[n_offspring + 1,:,:] = kid2
-      n_offspring += 2
 
-      # offspring[n_offspring+2,:,:] = parent1
+      # mutation
+      if np.random.choice([True,False], p=[0.5,0.5]):
 
-      # offspring[n_offspring+3,:,:] = parent2
-      # n_offspring += 4
+        kid1 = flip_two_nodes(kid1)
+        kid2 = flip_two_nodes(kid2)
 
 
-    
-    print(f'generation #: {i}, generation best: {current_best}, diversity: {np.mean(np.var(initial_population,axis=0))}, most likely: {probs[0]}')
+      k1_l = get_path_length(kid1)
+      k2_l = get_path_length(kid2)
+      if k1_l not in seen:
+        offspring[n_offspring,:,:] = kid1
+        n_offspring += 1
+        seen.add(k1_l)
+
+      if k2_l not in seen and n_offspring < population_size:
+        offspring[n_offspring,:,:] = kid2
+        n_offspring += 1
+        seen.add(k2_l)
+
+
+
     initial_population = np.copy(offspring)# np.concatenate((initial_population, offspring)) #np.copy(offspring)#
-  return(current_best)
+  run.finish()
+  return(current_best, best_indiv)
+
+def plot_data(tour):
+    plt.plot([i[0] for i in tour], [i[1] for i in tour])
+    plt.show()
 
 if __name__ == '__main__':
-    data = np.loadtxt('data/tsp.txt',delimiter=',')
-    print(evolutionary_algo(2500,data, 48))
+    data = np.loadtxt('data/easy.txt',delimiter=' ')
+    best_l, best_indiv = evolutionary_algo(600000,data, 40)
+    print(best_l)
+    plot_data(best_indiv)
+    # plot_data(data)
+    # plt.show()
+
+    # plot_data(np.random.permutation(data))
+    # plt.show()
+
+    # kid1, kid2 = cross_parents(np.random.permutation(data), np.random.permutation(data), 90, 400)
+
+    # plot_data(kid1)
+    # plt.show()
+
+    # plot_data(kid2)
+    # plt.show()
 
 
 
