@@ -105,7 +105,7 @@ def plot_data(tour):
 
 if __name__ == '__main__':
     data = np.loadtxt('data/circle500.txt',delimiter=' ')
-    best_l, best_indiv = evolutionary_algo(300000,data, 24)
+    best_l, best_indiv = evolutionary_algo(300000,data, 24, .33, .8, .5)
     print(best_l)
     plot_data(best_indiv)
 
