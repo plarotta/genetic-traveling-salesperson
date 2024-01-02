@@ -1,12 +1,11 @@
-import matplotlib.pyplot as plt
 import numpy as np
 import random
 import secrets
-from scipy.special import softmax
 from numba import njit
-# from sklearn.preprocessing import normalize
-import wandb
-from tqdm import tqdm
+
+
+
+np.random.seed(42)
 
 @njit
 def get_path_length(path: np.array) -> float:
@@ -94,7 +93,7 @@ def hillclimber_find_path(max_depth: int, data: np.array) -> float:
       current_path_length = next_path_length
   return(get_path_length(current_path))
 
-@njit
+# @njit
 def generate_segment(segment: np.array, reference: np.array) -> np.array:
   '''regenerate segment in the order that it appears in reference
   
@@ -109,19 +108,25 @@ def generate_segment(segment: np.array, reference: np.array) -> np.array:
     contains is adjusted to match the order they appear in the 
     reference
   '''
-  inds = segment == reference[:, None]
-  row_sums = inds.sum(axis = 2)
-  i, j = np.where(row_sums == 2) 
-  pos = np.ones(segment.shape[0], dtype = 'int64') * -1
-  pos[j] = i
-  return(reference[pos])
+  sorter = reference.argsort()
+  i = sorter[np.searchsorted(reference, segment, sorter=sorter)]
+  out = segment[np.argsort(i)]
+  return(out)
+
+def gen_cipher(dataset: np.array):
+  cipher = {}
+  for idx, city in enumerate(dataset):
+    tup_entry = tuple(city)
+    cipher[tup_entry] = idx
+    cipher[idx] = tup_entry
+  return(cipher)
 
 def cross_parents(parent1: np.array, 
                   parent2: np.array, 
                   crosspoint1: int, 
-                  crosspoint2: int
+                  crosspoint2: int,
+                  cipher=None
                   ) -> tuple:
-                  
   '''evolutionary operator for crossing individuals in a population of solutions.
   in TSP, individual solutions are paths through the 1000 cities in tsp.txt, and 
   the mechanism of crossing over is a simple 2-point crossover
@@ -140,14 +145,20 @@ def cross_parents(parent1: np.array,
     2 offspring solutions generated from thr 2-point crossover of the 2 parent
     candidate solutions
   '''
-  segment_A = generate_segment(parent2[:crosspoint1,], parent1)
-  segment_B = generate_segment(parent1[crosspoint1:crosspoint2,], parent2)
-  segment_C = generate_segment(parent2[crosspoint2:,], parent1)
-
-  kid1 = np.concatenate((parent1[:crosspoint1], segment_B, parent1[crosspoint2:]))
-  kid2 = np.concatenate((segment_A, parent2[crosspoint1:crosspoint2], segment_C))
   
-  return(kid1, kid2)
+  p1 = np.array([cipher[tuple(city)] for city in parent1])
+  p2 = np.array([cipher[tuple(city)] for city in parent2])
+
+  segment_A = generate_segment(p2[:crosspoint1,], p1)
+  segment_B = generate_segment(p1[crosspoint1:crosspoint2,], p2)
+  segment_C = generate_segment(p2[crosspoint2:,], p1)
+
+  kid1 = np.concatenate((p1[:crosspoint1], segment_B, p1[crosspoint2:]))
+  kid2 = np.concatenate((segment_A, p2[crosspoint1:crosspoint2], segment_C))
+
+  k1 = np.array([cipher[city] for city in kid1])
+  k2 = np.array([cipher[city] for city in kid2])
+  return(k1, k2)
 
 def pick_n_random_individuals(population: np.array, n: int, weights: list) -> list:
   '''pick n random individuals from a population using fitness-proportionate
@@ -165,7 +176,6 @@ def pick_n_random_individuals(population: np.array, n: int, weights: list) -> li
     n solutions from the population picked using fitness-proportionate selection
   '''
   out_idx = np.random.choice([i for i in range(len(population))], n, replace = False, p = weights)
-  # print(out_idx)
   output_individuals = [population[out_idx[0],], population[out_idx[1],]]
   return(output_individuals)
 
@@ -183,113 +193,3 @@ def fitness_sort(population: np.array) -> np.array:
   '''
   fit_vals = np.array([get_path_length(p) for p in population])
   return(population[fit_vals.argsort()[::]], np.min(fit_vals), np.sort(fit_vals))
-
-
-def evolutionary_algo(n_generations, data, population_size):
-  '''evolutionary algo for solving the traveling salesman problem.
-  Mutation operator: flip_two_nodes()
-  Breeding/crossing operator: cross_parents()
-  Selection: fitness-proportionate
-  
-  Args:
-    n_generations:
-      number of generations to run the algortithm for
-    data:
-      array (1000,2) of the input dataset of cities. each
-      row holds the x and y coordinate of its city
-
-  Returns:
-    fitness sorted population, shortest path length in population,
-    and the sorted array of all fitnesses in population
-  '''
-  run = wandb.init(name='600k steps',)
-  half_pop = int(population_size*.33)
-  initial_population =  np.array([np.random.permutation(data) for _ in range(population_size)])
-  # initial_population = np.concatenate( ( np.array([np.random.permutation(data) for _ in range(population_size-1)]) , np.expand_dims(data,axis=0) ) )
-
-
-  for i in tqdm(range(n_generations)):
-    
-    offspring = np.zeros((population_size,len(data),2))
-    n_offspring = 0
-    
-    initial_population, current_best, fitnesses = fitness_sort(initial_population)
-    best_indiv = initial_population[0]
-
-    initial_population = initial_population[:half_pop]
-    fitnesses = fitnesses[:half_pop]
-    probs = softmax(-fitnesses)#1/fitnesses*1/np.sum(1/fitnesses) 
-
-    # print(f'generation #: {i}, generation best: {current_best}, diversity: {np.mean(np.var(initial_population,axis=0))}, most likely: {probs[0]}')
-    run.log({'generation #': i, 
-             'generation best': current_best, 
-             'diversity': np.mean(np.var(initial_population,axis=0)),
-             'most likely': probs[0]})
-
-    seen = set([])
-    while n_offspring < population_size:
-
-      parent1, parent2 = pick_n_random_individuals(initial_population, 2, weights = probs)
-
-      # mating
-      if np.random.choice([True,False],p=[0.8,0.2]):
-        # n1, n2 = sorted([secrets.randbelow(len(data)), secrets.randbelow(len(data))])
-        n1, n2 = sorted([np.random.randint(low=0, high=len(data)), np.random.randint(low=0, high=len(data))])
-
-        kid1, kid2 = cross_parents(parent1, parent2, n1, n2) 
-
-      else:
-        kid1 = np.copy(parent1)
-        kid2 = np.copy(parent2)
-
-      # mutation
-      if np.random.choice([True,False], p=[0.5,0.5]):
-
-        kid1 = flip_two_nodes(kid1)
-        kid2 = flip_two_nodes(kid2)
-
-
-      k1_l = get_path_length(kid1)
-      k2_l = get_path_length(kid2)
-      if k1_l not in seen:
-        offspring[n_offspring,:,:] = kid1
-        n_offspring += 1
-        seen.add(k1_l)
-
-      if k2_l not in seen and n_offspring < population_size:
-        offspring[n_offspring,:,:] = kid2
-        n_offspring += 1
-        seen.add(k2_l)
-
-
-
-    initial_population = np.copy(offspring)# np.concatenate((initial_population, offspring)) #np.copy(offspring)#
-  run.finish()
-  return(current_best, best_indiv)
-
-def plot_data(tour):
-    plt.plot([i[0] for i in tour], [i[1] for i in tour])
-    plt.show()
-
-if __name__ == '__main__':
-    data = np.loadtxt('data/easy.txt',delimiter=' ')
-    best_l, best_indiv = evolutionary_algo(600000,data, 40)
-    print(best_l)
-    plot_data(best_indiv)
-    # plot_data(data)
-    # plt.show()
-
-    # plot_data(np.random.permutation(data))
-    # plt.show()
-
-    # kid1, kid2 = cross_parents(np.random.permutation(data), np.random.permutation(data), 90, 400)
-
-    # plot_data(kid1)
-    # plt.show()
-
-    # plot_data(kid2)
-    # plt.show()
-
-
-
-    

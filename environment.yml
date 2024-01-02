@@ -2,8 +2,15 @@ name: tsp-env
 channels:
   - conda-forge
   - defaults
+  - pytorch
 dependencies:
   - python=3.10.0
   - matplotlib
   - scipy
+  - pytorch
+  - pip
+  - pip:
+    - wandb
+    - tqdm
+    - numba
 prefix: /Users/plarotta/opt/anaconda3/envs/tsp-env
