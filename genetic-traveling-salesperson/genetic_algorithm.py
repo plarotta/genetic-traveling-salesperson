@@ -11,7 +11,7 @@ def evolutionary_algo(n_generations: int,
                       selection_fraction: float,
                       mating_probability: float,
                       mutation_probability: float,
-                      wandb=True
+                      wandb_logging=True
                       ) -> tuple[float,np.array]:
   '''evolutionary approach to solving the traveling salesman problem.
   Mutation operator: flip_two_nodes()
@@ -34,7 +34,7 @@ def evolutionary_algo(n_generations: int,
 
   cipher = gen_cipher(data)
   np.random.seed(42)
-  run = wandb.init(name='circle 500') if wandb else None
+  run = wandb.init(name='circle 500') if wandb_logging else None
 
   # initiate population
   half_pop = int(population_size*selection_fraction)
