@@ -1,13 +1,10 @@
+'''speedy helper functions for tsp ga'''
+
 import numpy as np
-import random
-import secrets
 from numba import njit
 
 
-
-np.random.seed(42)
-
-@njit
+@njit(nogil=True, fastmath=True)
 def get_path_length(path: np.array) -> float:
     '''calculates the distance covered by the path.
     
@@ -50,6 +47,7 @@ def randomly_find_path(iterations: int, data: np.array) ->list:
         best_dist = new_path_length
     return(path_lengths)
 
+@njit
 def flip_two_nodes(data: np.array) -> np.array:
   '''randomly swaps two cities in the path and returns the modified path
   
@@ -61,7 +59,9 @@ def flip_two_nodes(data: np.array) -> np.array:
     modified version of data where two cities in the path are switched
   '''
   modified_path = np.copy(data)
-  indices = [secrets.randbelow(len(data)), secrets.randbelow(len(data))]
+  n1,n2 = [np.random.randint(low=0, high=len(data)), 
+                    np.random.randint(low=0, high=len(data))]
+  indices = [n1,n2] if n1 < n2 else [n2,n1]
   modified_path[indices[0],] = data[indices[1],]
   modified_path[indices[1],] = data[indices[0],]
   return(modified_path)
@@ -125,6 +125,7 @@ def cross_parents(parent1: np.array,
                   parent2: np.array, 
                   crosspoint1: int, 
                   crosspoint2: int,
+                  mating_prob: float,
                   cipher=None
                   ) -> tuple:
   '''evolutionary operator for crossing individuals in a population of solutions.
@@ -145,6 +146,9 @@ def cross_parents(parent1: np.array,
     2 offspring solutions generated from thr 2-point crossover of the 2 parent
     candidate solutions
   '''
+
+  if not np.random.choice([True,False],p=[mating_prob, 1-mating_prob]):
+    return(parent1,parent2)
   
   p1 = np.array([cipher[tuple(city)] for city in parent1])
   p2 = np.array([cipher[tuple(city)] for city in parent2])
@@ -180,7 +184,7 @@ def pick_n_random_individuals(population: np.array, n: int, weights: list) -> li
   return(output_individuals)
 
 @njit
-def fitness_sort(population: np.array) -> np.array:
+def fitness_sort(population: np.array) -> tuple[np.array,np.array]:
   '''sort population of solutions by fitness.
 
   Args:
@@ -192,4 +196,16 @@ def fitness_sort(population: np.array) -> np.array:
     and the sorted array of all fitnesses in population
   '''
   fit_vals = np.array([get_path_length(p) for p in population])
-  return(population[fit_vals.argsort()[::]], np.min(fit_vals), np.sort(fit_vals))
+  sorted_fitnesses = np.sort(fit_vals)
+  sorted_population = population[fit_vals.argsort()[::]]
+  return(sorted_population, sorted_fitnesses[0], sorted_fitnesses)
+
+@njit(nogil=True, fastmath=True)
+def select_member(probabilities):
+  '''roulette-wheel selection'''
+  magic_number = np.random.random() # for selection
+  running_sum = 0
+  for idx,prob in enumerate(probabilities):
+      running_sum += prob
+      if running_sum >= magic_number:
+          return(idx)
