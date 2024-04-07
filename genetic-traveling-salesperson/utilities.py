@@ -21,7 +21,7 @@ def get_path_length(path: np.array) -> float:
       np.linalg.norm(path[i+1]-path[i])
       for i in range(len(path)-1)
       ])
-    tot = np.sum(tot)
+    tot = np.sum(tot) + np.linalg.norm(path[-1]-path[0])
     return(np.round(tot,3))
 
 def randomly_find_path(iterations: int, data: np.array) ->list:
@@ -163,25 +163,6 @@ def cross_parents(parent1: np.array,
   k1 = np.array([cipher[city] for city in kid1])
   k2 = np.array([cipher[city] for city in kid2])
   return(k1, k2)
-
-def pick_n_random_individuals(population: np.array, n: int, weights: list) -> list:
-  '''pick n random individuals from a population using fitness-proportionate
-  selection. 
-  
-  Args:
-    population:
-      all candidate solutions in the current population
-    n:
-      number of individual solutions to choose
-    weights:
-      for 2-point crossover
-
-  Returns:
-    n solutions from the population picked using fitness-proportionate selection
-  '''
-  out_idx = np.random.choice([i for i in range(len(population))], n, replace = False, p = weights)
-  output_individuals = [population[out_idx[0],], population[out_idx[1],]]
-  return(output_individuals)
 
 @njit
 def fitness_sort(population: np.array) -> tuple[np.array,np.array]:

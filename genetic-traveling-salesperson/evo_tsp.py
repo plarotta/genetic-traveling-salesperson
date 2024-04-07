@@ -28,14 +28,25 @@ class GeneTSP(Evolution):
         return(fitness_sort(population))
     
     def get_selection_probabilities(self, fitnesses):
-        return(softmax(-fitnesses))
+        probs = fitnesses/np.sum(fitnesses)
+        probs = [1-i for i in probs]
+        # return(softmax(-fitnesses))
+        return(probs)
     
     def select_individual(self, probabilities):
         '''roulette-wheel selection'''
         return(select_member(probabilities))
     
     def select_parents(self, probabilities, population):
-        p1,p2 = [self.select_individual(probabilities) for _ in range(2)]
+        p1 = self.select_individual(probabilities) 
+
+        for _ in range(10): # 10 tries to find a different parent
+            p2 = self.select_individual(probabilities) 
+            if p2 != p1:
+                return(population[p1], population[p2])
+        
+        # if fitness-prop failed to get a different parent, choose one randomly
+        p2 = set(i for i in list(range(len(population))) if i != p1).pop() 
         return(population[p1], population[p2])
     
     def crossover(self, parent1, parent2, mating_prob):
