@@ -30,6 +30,8 @@ def genetic_agorithm(n_generations: int,
         # input()
         pop_diversity = np.mean(np.var(population,axis=0))
         population, best, fitnesses = evolution.get_population_fitness(population)
+        population = population[:int(selection_fraction*len(population))]
+        fitnesses = fitnesses[:int(selection_fraction*len(fitnesses))]
         selection_probs = evolution.get_selection_probabilities(fitnesses)
         population = evolution.produce_next_generation(population_size, 
                                                        selection_probs, 
@@ -37,7 +39,6 @@ def genetic_agorithm(n_generations: int,
                                                        mutation_probability,
                                                        mating_probability)
         all_time_best = best if best < all_time_best else all_time_best
-        population = population[:int(selection_fraction*len(population))]
 
         if wandb_logging is True:
             run.log({'Generation': i+1, "Generation Best": best, 'All-time Best': all_time_best, "Diversity": pop_diversity})
@@ -49,10 +50,10 @@ def genetic_agorithm(n_generations: int,
 
 if __name__ == '__main__':
     data = np.loadtxt('data/circle500.txt',delimiter=' ')
-    genetic_agorithm(n_generations=5000, 
+    genetic_agorithm(n_generations=15000, 
                      data=data, 
-                     population_size=50, 
-                     selection_fraction=.9, 
-                     mating_probability=.6, 
-                     mutation_probability=.85, 
+                     population_size=30, 
+                     selection_fraction=0.33, 
+                     mating_probability=.45, 
+                     mutation_probability=.7, 
                      wandb_logging=False)
