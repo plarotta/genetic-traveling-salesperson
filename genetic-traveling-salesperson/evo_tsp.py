@@ -67,6 +67,9 @@ class GeneTSP(Evolution):
             next_gen[idx] = offspring[0]
             next_gen[idx+1] = offspring[1]
         return(next_gen)
+    
+    def visualize_member(self, member):
+        pass
 
         
 

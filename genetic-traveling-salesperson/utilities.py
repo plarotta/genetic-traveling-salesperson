@@ -4,7 +4,7 @@ import numpy as np
 from numba import njit
 
 
-@njit(nogil=True, fastmath=True)
+@njit(fastmath=True)
 def get_path_length(path: np.array) -> float:
     '''calculates the distance covered by the path.
     
@@ -181,7 +181,7 @@ def fitness_sort(population: np.array) -> tuple[np.array,np.array]:
   sorted_population = population[fit_vals.argsort()[::]]
   return(sorted_population, sorted_fitnesses[0], sorted_fitnesses)
 
-@njit(nogil=True, fastmath=True)
+@njit(fastmath=True)
 def select_member(probabilities):
   '''roulette-wheel selection'''
   magic_number = np.random.random() # for selection
