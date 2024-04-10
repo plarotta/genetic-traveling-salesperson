@@ -1,12 +1,11 @@
+import sys
+import os
+sys.path.append(os.getcwd())
 import wandb
-from tqdm import tqdm
 import numpy as np
-from scipy.special import softmax
-import matplotlib.pyplot as plt
-from utilities import *
-from evo_tsp import GeneTSP
-from gui import *
-import time
+from gene_tsp.utilities import *
+from gene_tsp.evo_tsp import GeneTSP
+from gene_tsp.gui import *
 import threading
 
 
@@ -16,7 +15,8 @@ def genetic_agorithm(n_generations: int,
                      selection_fraction: float,
                      mating_probability: float,
                      mutation_probability: float,
-                     plotter,
+                     gui=None,
+                     plot_freq=1,
                      wandb_logging=True
                      ) -> tuple[float,np.array]:
     np.random.seed(42)
@@ -35,7 +35,9 @@ def genetic_agorithm(n_generations: int,
     for i in range(n_generations):
         pop_diversity = np.mean(np.var(population,axis=0))
         population, best, fitnesses = evolution.get_population_fitness(population)
-        plotter.plot_member(population[0], i, best)
+        
+        if i % plot_freq == 0 and gui is not None:
+            gui.plot_member(population[0], i, best)
 
         # selection pressure
         population = population[:int(selection_fraction*len(population))]
@@ -57,17 +59,19 @@ def genetic_agorithm(n_generations: int,
     return(best, population[0])
 
 if __name__ == '__main__':
-    data = np.loadtxt('data/circle50.txt',delimiter=' ')
+    data = np.loadtxt('data/tsp.txt',delimiter=',')
+
     app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
     threading.Thread(target=genetic_agorithm, kwargs={"n_generations": 3000, 
                                                       "data": data, 
-                                                      "population_size": 30, 
-                                                      "selection_fraction":0.8, 
+                                                      "population_size": 60, 
+                                                      "selection_fraction":0.5, 
                                                       "mating_probability":.8, 
                                                       "mutation_probability":.9,
-                                                      "plotter":window, 
+                                                      "gui":window, 
+                                                      "plot_freq": 5,
                                                       "wandb_logging":False}).start()
 
     sys.exit(app.exec_())

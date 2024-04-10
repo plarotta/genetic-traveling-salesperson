@@ -1,5 +1,5 @@
-from evo_base import Evolution
-from utilities import *
+from gene_tsp.evo_base import Evolution
+from gene_tsp.utilities import *
 import numpy as np
 from scipy.special import softmax
 
@@ -28,10 +28,10 @@ class GeneTSP(Evolution):
         return(fitness_sort(population))
     
     def get_selection_probabilities(self, fitnesses):
-        probs = fitnesses/np.sum(fitnesses)
-        probs = [1-i for i in probs]
-        # return(softmax(-fitnesses))
-        return(probs)
+        # probs = fitnesses/np.sum(fitnesses)
+        # probs = [1-i for i in probs]
+        return(softmax(-fitnesses))
+        # return(probs)
     
     def select_individual(self, probabilities):
         '''roulette-wheel selection'''
