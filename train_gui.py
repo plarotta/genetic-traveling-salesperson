@@ -20,13 +20,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.data == "easy":
-        data = np.loadtxt('data/circle10.txt',delimiter=' ')
+        data = np.loadtxt('data/easy.txt',delimiter=' ')
     elif args.data == "medium":
-        data = np.loadtxt('data/circle50.txt',delimiter=' ')
+        data = np.loadtxt('data/medium.txt',delimiter=' ')
     elif args.data == "hard":
-        data = np.loadtxt('data/circle500.txt',delimiter=' ')
+        data = np.loadtxt('data/hard.txt',delimiter=' ')
     elif args.data == "challenge":
-        data = np.loadtxt('data/tsp.txt',delimiter=',')
+        data = np.loadtxt('data/challenge.txt',delimiter=',')
     else:
         raise ValueError("Invalid dataset")
 
