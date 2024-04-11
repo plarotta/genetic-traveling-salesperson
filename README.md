@@ -58,7 +58,6 @@ There are 4 datasets of increasing difficulty included in this repo, and I also 
 
 ## Repo structure
 
-{% raw %}
 ```
 .gitignore
 LICENSE
@@ -79,7 +78,6 @@ gene_tsp
 train.py
 train_gui.py
 ```
-{% endraw %}
 
 ## Install
 
