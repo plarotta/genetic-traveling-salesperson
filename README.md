@@ -56,23 +56,51 @@ For a simple GP like the one described above, the only operators we need to defi
 ### Data
 There are 4 datasets of increasing difficulty included in this repo, and I also included the script _easy_gen.py_ to aid in generating more data if desired. The first 3 datasets are points sampled from the perimeter of a unit circle. These datasets are great because we know that the optimal path is always along the perimeter so the shortest path length we can reach is exactly equal to 2π. Circle10 contains 10 points, circle50 contains 50, and circle500 contains 500. The last datafile is tsp.txt which contains a more complex distribution of 1000 points, and it is the hardest of the 4 datasets. From the [Christofides algorithm](https://en.wikipedia.org/wiki/Christofides_algorithm) we found that the length of the optimal path is around 11. 
 
-## Run this repo
-I prefer to keep the python environments of different projects isolated, and my package manager of choice is [Mamba](https://github.com/mamba-org/mamba). Mamba is a fast (written in C), drop-in replacement for conda. It really shines in large ML projects where solving the environment can take hours in conda. It is not necessary for this project, but I still highly recommend Mamba. 
+## Repo structure
 
-To install Mamba, make sure you DO NOT have conda install and follow the install guide here: https://mamba.readthedocs.io/en/latest/installation/mamba-installation.html.
+{% raw %}
+```
+.gitignore
+LICENSE
+README.md
+data
+   |-- easy.txt
+   |-- medium.txt
+   |-- hard.txt
+   |-- challenge.txt
+environment.yml
+gene_tsp
+   |-- __init__.py
+   |-- evo_base.py
+   |-- evo_tsp.py
+   |-- genetic_algorithm.py
+   |-- gui.py
+   |-- utilities.py
+train.py
+train_gui.py
+```
+{% endraw %}
 
-Whether you chose to use mamba or to stick to conda, I recommend for the sake of best practice to build the environment for this project from the provided yml file.
+## Install
 
-Run 
+Create a conda (or mamba) environment with Python 3.10:
 
-```conda env create --name YOUR_DESIRED_ENVIRONMENT_NAME --file=environment.yml```  to create the environment
+```conda create -n genetsp python=3.10```
 
-and
+Activate environment:
 
-```conda activate YOUR_DESIRED_ENVIRONMENT_NAME``` to activate it
+```conda activate genetsp```
 
-With this you should now be able to run genetic_algorithm.py directly via 
-```python genetic_algorithm.py```
-You can modify the code under ```if __name__ == __main__``` to change the dataset and to adjust the number of generations to run for as well as the population size. 
+Install dependencies:
 
-You'll notice an @njit decorator on some of my helper functions defined in utilities.py, and its main purpose is to speed things up. With Numpy we can use the Numba library to take advantage of [just-in-time compilation ](https://people.duke.edu/~ccc14/sta-663-2016/18C_Numba.html) to massively speed up simple computations. With JIT, the Python code of an individual function only needs to be compiled down to machine code once, and this machine code is cached in memory for quick access. 
+```conda install numpy numba tqdm wandb matplotlib pyqt scipy```
+
+## Run 
+
+To run the GA wih GUI, cd to the root of this repo and run:
+
+```python train_gui.py```
+
+To run the GA wihout the GUI, cd to the root of this repo and run:
+
+```python train.py```
