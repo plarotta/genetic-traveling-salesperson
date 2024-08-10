@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
 
         self.paths = []  # List to store generated paths
 
-    def plot_member(self, member, generation, member_fitness):
+    def plot_member(self, member, generation, member_fitness, div,atb):
         self.figure.clear()
         ax = self.figure.add_subplot(111)
 
@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         ax.set_xlim([-1,1])
         ax.set_ylim([-1,1])
         ax.set_ylabel('Y')
-        ax.set_title(f'Best, gen: {generation}, fitness: {member_fitness:.2f}')
+        ax.set_title(f'All-time best: {atb:.2f} gen: {generation}, fitness: {member_fitness:.2f}, diversity: {div:.2f}')
         ax.grid(True)
 
         self.canvas.draw()

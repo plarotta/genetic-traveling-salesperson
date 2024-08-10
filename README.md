@@ -76,3 +76,6 @@ With this you should now be able to run genetic_algorithm.py directly via
 You can modify the code under ```if __name__ == __main__``` to change the dataset and to adjust the number of generations to run for as well as the population size. 
 
 You'll notice an @njit decorator on some of my helper functions defined in utilities.py, and its main purpose is to speed things up. With Numpy we can use the Numba library to take advantage of [just-in-time compilation ](https://people.duke.edu/~ccc14/sta-663-2016/18C_Numba.html) to massively speed up simple computations. With JIT, the Python code of an individual function only needs to be compiled down to machine code once, and this machine code is cached in memory for quick access. 
+
+
+```python train_gui.py --data medium --n_gen 12000 --pop_size 40 --select_frac 0.70 --mating_prob .85 --mut_prob .7 --plot_freq 10```

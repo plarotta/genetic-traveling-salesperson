@@ -2,10 +2,12 @@ from gene_tsp.genetic_algorithm import genetic_agorithm
 from gene_tsp.gui import *
 import threading
 import argparse
+import numpy as np
 
 
 
 if __name__ == "__main__":
+    np.random.seed(42)
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", action="store")
     parser.add_argument("--n_gen", action="store", type=int)

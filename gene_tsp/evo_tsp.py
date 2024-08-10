@@ -30,7 +30,22 @@ class GeneTSP(Evolution):
     def get_selection_probabilities(self, fitnesses):
         # probs = fitnesses/np.sum(fitnesses)
         # probs = [1-i for i in probs]
-        return(softmax(-fitnesses))
+        # return(softmax(-fitnesses))
+        n = len(fitnesses)
+        prob_vector = [1.0/n for _ in range(n)]
+
+        # two best
+        prob_vector[0] = 8.0 * prob_vector[0]
+        prob_vector[1] = 8.0 * prob_vector[1]
+
+        #  top 50%
+        for idx in range(2,int(n/2)):
+            prob_vector[idx] = 2.0 * prob_vector[idx]
+
+        # normalize
+        tot = sum(prob_vector)
+        prob_vector = [j / tot for j in prob_vector]
+        return(prob_vector)
         # return(probs)
     
     def select_individual(self, probabilities):
@@ -55,6 +70,8 @@ class GeneTSP(Evolution):
         # crossover points for 2-point crossover
         n1, n2 = sorted([np.random.randint(low=0, high=len(self.data)), 
                     np.random.randint(low=0, high=len(self.data))])
+
+
         return(cross_parents(parent1, parent2, n1, n2, mating_prob, self.cipher))   
 
     def produce_next_generation(self, population_size, probabilities, population, mut_p, mat_p):
@@ -64,8 +81,14 @@ class GeneTSP(Evolution):
             parent1, parent2 = self.select_parents(probabilities, population)
             offspring = self.crossover(parent1, parent2, mat_p)
             offspring = tuple(self.mutate(child, mut_p) for child in offspring)
+
             next_gen[idx] = offspring[0]
-            next_gen[idx+1] = offspring[1]
+
+            if idx<population_size-1:
+                next_gen[idx+1] = offspring[1]
+
+            # next_gen[idx] = offspring[0] if get_path_length(parent1) > get_path_length(offspring[0]) else parent1
+            # next_gen[idx+1] = offspring[1] if get_path_length(parent2) > get_path_length(offspring[1]) else parent2
         return(next_gen)
     
     def visualize_member(self, member):

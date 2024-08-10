@@ -37,18 +37,20 @@ def genetic_agorithm(n_generations: int,
         population, best, fitnesses = evolution.get_population_fitness(population)
         
         if i % plot_freq == 0 and gui is not None:
-            gui.plot_member(population[0], i, best)
+            gui.plot_member(population[0], i, best, pop_diversity,all_time_best)
 
         # selection pressure
-        population = population[:int(selection_fraction*len(population))]
-        fitnesses = fitnesses[:int(selection_fraction*len(fitnesses))]
+        population = population[:int(selection_fraction*population_size)]
+        fitnesses = fitnesses[:int(selection_fraction*population_size)]
 
         selection_probs = evolution.get_selection_probabilities(fitnesses)
-        population = evolution.produce_next_generation(population_size, 
+        population = evolution.produce_next_generation(population_size,
                                                        selection_probs, 
                                                        population, 
                                                        mutation_probability,
                                                        mating_probability)
+
+
         all_time_best = best if best < all_time_best else all_time_best
 
         if wandb_logging is True:
@@ -70,7 +72,7 @@ if __name__ == '__main__':
                                                       "selection_fraction":0.5, 
                                                       "mating_probability":.8, 
                                                       "mutation_probability":.9,
-                                                      "gui":window, 
+                                                      "gui": window, 
                                                       "plot_freq": 5,
                                                       "wandb_logging":False}).start()
 

@@ -2,7 +2,10 @@
 
 import numpy as np
 from numba import njit
-
+import random
+import sys
+import os
+sys.path.append(os.getcwd())
 
 @njit(fastmath=True)
 def get_path_length(path: np.array) -> float:
@@ -153,15 +156,31 @@ def cross_parents(parent1: np.array,
   p1 = np.array([cipher[tuple(city)] for city in parent1])
   p2 = np.array([cipher[tuple(city)] for city in parent2])
 
-  segment_A = generate_segment(p2[:crosspoint1,], p1)
-  segment_B = generate_segment(p1[crosspoint1:crosspoint2,], p2)
-  segment_C = generate_segment(p2[crosspoint2:,], p1)
+  p1_dict = {val:i for i,val in enumerate(p1)}
+  p2_dict = {val:i for i,val in enumerate(p2)}
 
-  kid1 = np.concatenate((p1[:crosspoint1], segment_B, p1[crosspoint2:]))
-  kid2 = np.concatenate((segment_A, p2[crosspoint1:crosspoint2], segment_C))
+  k1 = np.zeros(p1.shape)
+  k2 = np.zeros(p2.shape)
 
-  k1 = np.array([cipher[city] for city in kid1])
-  k2 = np.array([cipher[city] for city in kid2])
+  k1[:crosspoint1]= p1[:crosspoint1]
+  k1[crosspoint2:] = p1[crosspoint2:]
+  k2[:crosspoint1]= p2[:crosspoint1]
+  k2[crosspoint2:] = p2[crosspoint2:]
+
+  temp1 = []
+  temp2 = []
+  for i in range(crosspoint1,crosspoint2):
+    temp1.append([p1[i], p2_dict[p1[i]]]) # val and its index in the other parent
+    temp2.append([p2[i], p1_dict[p2[i]]]) # val and its index in the other parent
+  temp1 = sorted(temp1, key=lambda x: x[1])
+  temp2 = sorted(temp2, key=lambda x: x[1])
+
+  k1[crosspoint1:crosspoint2] = [i[0] for i in temp1]
+  k2[crosspoint1:crosspoint2] = [i[0] for i in temp2]
+
+  k1 = np.array([cipher[k1[i]] for i in range(len(k1))])
+  k2 = np.array([cipher[k2[i]] for i in range(len(k2))])
+  
   return(k1, k2)
 
 @njit
@@ -190,3 +209,22 @@ def select_member(probabilities):
       running_sum += prob
       if running_sum >= magic_number:
           return(idx)
+
+if __name__ == "__main__":
+  from gene_tsp.evo_tsp import GeneTSP
+  from gene_tsp.gui import *
+  data = np.loadtxt('data/easy.txt',delimiter=' ')
+  evolution = GeneTSP(data)
+    
+  # initiate population
+  population =  evolution.produce_initial_population(12)
+  print(population.shape)
+  A = population[0,:,:]
+  B = population[1,:,:]
+  # print(f'A: {A}')
+  # print(f'B: {B}')
+  C,D = evolution.crossover(A,B,1)
+
+  # print(f'C: {C}')
+  # print(f'D: {D}')
+
